@@ -1,0 +1,75 @@
+title: "Exercise-8"
+author: "Aldair Perez"
+date: "03-21-2025"
+format: html
+execute: 
+  echo: true
+
+# Question 1
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+# Quesiton 2
+```{r}
+url <- 'https://raw.githubusercontent.com/nytimes/covid-19-data/refs/heads/master/us-counties-2020.csv'
+covid_data <- read.csv("https://raw.githubusercontent.com/nytimes/covid-19-data/refs/heads/master/us-counties-2020.csv")
+```
+
+```{r}
+state_data <- data.frame(
+  state_abbreviation = state.abb,
+  state_name = state.name,
+  region = state.region,
+  stringsAsFactors = FALSE
+)
+```
+
+# Question 3
+```{r}
+covid_state_data <- merge(covid_data, state_data, by.x = "state", by.y = "state_abbreviation", all.x = TRUE)
+merged_data <- merge(covid_data, state_data, by.x = "state", by.y = "state_name", all.x = TRUE)
+```
+
+# Question 4
+```{r}
+region_stats <- merged_data %>%
+  group_by(region, state) %>%
+  arrange(state, date) %>%
+  mutate(
+    daily_cases = cases - lag(cases, default = 0), 
+    daily_deaths = deaths - lag(deaths, default = 0),  
+    cumulative_cases = cumsum(daily_cases),  
+    cumulative_deaths = cumsum(daily_deaths)  
+  ) %>%
+  ungroup()
+```
+
+# Question 5
+```{r}
+long_data <- region_stats %>%
+  pivot_longer(
+    cols = c(daily_cases, daily_deaths, cumulative_cases, cumulative_deaths),  
+    names_to = "measure",  
+    values_to = "value"    
+  )
+```
+
+```{r}
+long_data <- long_data %>% 
+  filter(date >= as.Date("2020-03-01") & date <= as.Date("2020-03-15"))
+```
+
+# Question 6
+```{r}
+ggplot(long_data %>% filter(measure %in% c("daily_cases", "daily_deaths")), 
+       aes(x = date, y = value, color = measure)) +
+  geom_line() +
+  facet_wrap(~ region, scales = "free_y") +
+  labs(title = "Daily Cases and Deaths by Region", 
+       y = "Count", x = "Date") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
